@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Voice Q&A — Expected vs Your Answer (Ordered)</title>
+  <style>
+    :root{--bg:#f6f8fb;--card:#fff;--muted:#666;--ok:#0b7;--warn:#f6a623;--bad:#d73a49}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:20px;background:var(--bg);color:#111}
+    h1{font-size:20px;margin-bottom:6px}
+    .controls{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+    button{padding:8px 12px;border-radius:8px;border:1px solid #d0d7de;background:white;cursor:pointer}
+    select,input{padding:8px;border-radius:6px}
+    .question{background:var(--card);padding:12px;border-radius:10px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,0.06);display:grid;grid-template-columns:1fr 1fr;gap:12px;border:2px solid transparent}
+    .qleft{border-right:1px solid #eee;padding-right:12px}
+    .qtext{font-weight:700;margin-bottom:6px}
+    .expected{color:#0b5;font-size:14px;min-height:20px}
+    .user{color:#0366d6;font-size:14px;min-height:20px}
+    .meta{color:var(--muted);font-size:13px}
+    .status{margin-left:8px;color:#0366d6}
+    #saveBtn{margin-left:auto}
+    .small{font-size:13px;color:var(--muted)}
+    footer{margin-top:16px;color:var(--muted);font-size:13px}
+    .match{font-weight:700}
+    .match.ok{color:var(--ok)}
+    .match.maybe{color:var(--warn)}
+    .match.no{color:var(--bad)}
+  </style>
+</head>
+<body>
+  <h1>Voice Q&A — Expected vs Your Answer (Ordered)</h1>
+  <p class="meta">This page will <strong>ask questions using speech</strong>, show the <em>expected/actual answer</em> (from your data) and record your spoken answer side-by-side. Questions will be asked in the exact order provided.</p>
+
+  <div class="controls">
+    <label for="voiceSelect">Voice:</label>
+    <select id="voiceSelect"></select>
+
+    <label for="listenMs">Listen (ms):</label>
+    <input id="listenMs" type="number" min="5000" step="5000" value="30000" style="width:90px" title="Maximum listening time per attempt in milliseconds">
+
+    <label for="retries">Retries:</label>
+    <input id="retries" type="number" min="0" max="5" value="2" style="width:60px" title="How many times to repeat question when no answer is heard">
+
+    <label for="threshold">Match threshold:</label>
+    <input id="threshold" type="number" min="0" max="1" step="0.05" value="0.60" style="width:80px" title="Similarity threshold (0-1) for marking answers as matching">
+
+    <button id="startBtn">Start session</button>
+    <button id="restartBtn">Reset answers</button>
+    <button id="saveBtn">Download CSV</button>
+    <span class="status" id="status">Idle</span>
+  </div>
+
+  <div id="questions"></div>
+
+  <footer>Works best in Chrome or Edge on desktop. Allow microphone access when prompted.</footer>
+
+  <script>
+    // Questions and expected answers provided by the user (ordered)
+    const QA = [
+      {q: "What is your Purpose of visit?", expected: "To attend my nephew’s graduation ceremony and explore nearby places."},
+      {q: "Where is he studying?", expected: "At Northeastern University, Boston."},
+      {q: "Where does he live or which city?", expected: "Boston."},
+      {q: "When is the graduation ceremony?", expected: "On April 29th, 2026."},
+      {q: "How long will you stay?", expected: "3 weeks."},
+      {q: "Where will you stay?", expected: "I will stay with my nephew in Boston."},
+      {q: "Who is he to you?", expected: "He is my sister’s son."},
+      {q: "Why do you want to go to the graduation ceremony of your sister’s son?", expected: "It is an important achievement for him and our family, so I want to be there."},
+      {q: "Who is paying for the trip?", expected: "I am paying for my travel."},
+      {q: "What do you do in India?", expected: "I am a managing partner in construction company, SRI CHARAN BUILDERS."},
+      {q: "What type of work do you do?", expected: "I handle residential projects."},
+      {q: "How long in this field?", expected: "20 years."},
+      {q: "Why will you return to India?", expected: "I have ongoing residential projects, assets, and my family lives here."},
+      {q: "Have you travelled before?", expected: "Yes, I visited Bangkok and Singapore."},
+      {q: "Are you Married?", expected: "Yes."},
+      {q: "Why is your family not traveling with you?", expected: "My wife will look after the business in my absence, and my child has school, so they cannot travel."},
+      {q: "Why choose this time to travel?", expected: "Because the graduation is on April 29th, 2026."},
+      {q: "What places will you visit?", expected: "Boston, New York, and nearby places."},
+      {q: "Do you plan to work in the U.S.?", expected: "No, officer. I will only visit and return."},
+      {q: "What is your monthly income?", expected: "I earn around 5 to 6 lakh rupees per month from my construction business."},
+      {q: "What is your annual income?", expected: "My annual income is approximately 50 to 60 lakh, as per my income tax returns."},
+      {q: "What exactly do you do as a Managing Partner?", expected: "I manage residential construction projects — planning, procurement, budgeting, and coordinating with contractors and clients."},
+      {q: "How many projects are you handling now?", expected: "Currently we are handling 2 ongoing residential projects located in Vijayawada."},
+      {q: "How long have you been in this business?", expected: "I have been running this construction business for the last 25 years."},
+      {q: "Do you have bank statements or IT returns?", expected: "Yes, I have 3 years of IT returns and 6 months of bank statements, and I can show them if required."},
+      {q: "What is your business turnover?", expected: "Our annual turnover is approximately 4 to 4 crore from residential construction projects."},
+      {q: "What is your profit share as Managing Partner?", expected: "My profit share in the partnership firm is 60%."},
+      {q: "What savings do you have?", expected: "I have savings in bank accounts, fixed deposits, and investments totaling around 30 lakh."},
+      {q: "Do you own property?", expected: "Yes, I own residential/commercial property in Vijayawada and Tadepalligudem."},
+      {q: "Do you have business assets?", expected: "Yes, our firm owns equipment and holds project assets related to construction."},
+      {q: "How will you fund your trip?", expected: "I will fund the trip myself using my personal savings and income from my construction business."},
+      {q: "What makes you return to India?", expected: "I have ongoing construction projects and responsibilities as a managing partner. I must return to continue operations."}
+    ];
+
+    // UI elements
+    const voiceSelect = document.getElementById('voiceSelect');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const questionsDiv = document.getElementById('questions');
+    const statusEl = document.getElementById('status');
+    const listenMsEl = document.getElementById('listenMs');
+    const retriesEl = document.getElementById('retries');
+    const thresholdEl = document.getElementById('threshold');
+
+    // Web Speech objects
+    const synth = window.speechSynthesis;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+    // Build question blocks on page
+    function buildQuestions() {
+      questionsDiv.innerHTML = '';
+      QA.forEach((item, i) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'question';
+        wrapper.id = 'q-' + i;
+
+        const left = document.createElement('div');
+        left.className = 'qleft';
+        const qtext = document.createElement('div');
+        qtext.className = 'qtext';
+        qtext.textContent = (i + 1) + '. ' + item.q;
+
+        const expectedLabel = document.createElement('div');
+        expectedLabel.className = 'small';
+        expectedLabel.textContent = 'Expected / Actual Answer (from document):';
+
+        const expected = document.createElement('div');
+        expected.className = 'expected';
+        expected.id = 'expected-' + i;
+        expected.textContent = item.expected;
+
+        left.appendChild(qtext);
+        left.appendChild(expectedLabel);
+        left.appendChild(expected);
+
+        const right = document.createElement('div');
+        const userLabel = document.createElement('div');
+        userLabel.className = 'small';
+        userLabel.textContent = 'Your spoken answer:';
+        const user = document.createElement('div');
+        user.className = 'user';
+        user.id = 'user-' + i;
+        user.textContent = '';
+
+        const live = document.createElement('div');
+        live.className = 'meta';
+        live.id = 'live-' + i;
+        live.textContent = '';
+
+        const match = document.createElement('div');
+        match.className = 'meta match';
+        match.id = 'match-' + i;
+        match.textContent = '';
+
+        right.appendChild(userLabel);
+        right.appendChild(user);
+        right.appendChild(live);
+        right.appendChild(match);
+
+        wrapper.appendChild(left);
+        wrapper.appendChild(right);
+        questionsDiv.appendChild(wrapper);
+      });
+    }
+
+    // Populate voices and prefer en-US voices
+    function populateVoices() {
+      const voices = synth.getVoices();
+      voiceSelect.innerHTML = '';
+      voices.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.name + '||' + v.lang;
+        opt.textContent = `${v.name} — ${v.lang}`;
+        voiceSelect.appendChild(opt);
+      });
+
+      const preferred = voices.find(v => v.lang && v.lang.includes('en-US')) || voices[0];
+      if (preferred) {
+        for (let i=0;i<voiceSelect.options.length;i++) {
+          if (voiceSelect.options[i].value.startsWith(preferred.name + '||')) { voiceSelect.selectedIndex = i; break; }
+        }
+      }
+    }
+
+    // Speak text using selected voice
+    function speakText(text, onEnd) {
+      if (!synth) { console.warn('No speechSynthesis available'); onEnd && onEnd(); return; }
+      const [voiceName] = voiceSelect.value.split('||');
+      const voices = synth.getVoices();
+      const utter = new SpeechSynthesisUtterance(text);
+      const v = voices.find(x => x.name === voiceName) || voices.find(x => x.lang && x.lang.includes('en-US'));
+      if (v) utter.voice = v;
+      utter.rate = 0.98;
+      utter.onstart = () => { statusEl.textContent = 'Speaking...'; }
+      utter.onend = () => { statusEl.textContent = 'Spoken'; onEnd && onEnd(); }
+      synth.cancel();
+      synth.speak(utter);
+    }
+
+    // Normalize text for matching
+    function normalize(s){
+      if(!s) return '';
+      return s.toString().toLowerCase().replace(/["'’‘.,-\/()]/g,'').replace(/\s+/g,' ').trim();
+    }
+
+    // Levenshtein distance
+    function levenshtein(a,b){
+      const A = a.split('');
+      const B = b.split('');
+      const m = A.length, n = B.length;
+      if(m===0) return n; if(n===0) return m;
+      const dp = Array.from({length:m+1},()=>new Array(n+1));
+      for(let i=0;i<=m;i++) dp[i][0]=i;
+      for(let j=0;j<=n;j++) dp[0][j]=j;
+      for(let i=1;i<=m;i++){
+        for(let j=1;j<=n;j++){
+          const cost = A[i-1]===B[j-1]?0:1;
+          dp[i][j]=Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1]+cost);
+        }
+      }
+      return dp[m][n];
+    }
+
+    // Similarity ratio 0..1
+    function similarityScore(a,b){
+      const na = normalize(a); const nb = normalize(b);
+      if(na.length===0 && nb.length===0) return 1;
+      if(na.length===0 || nb.length===0) return 0;
+      const dist = levenshtein(na, nb);
+      const maxLen = Math.max(na.length, nb.length);
+      return 1 - (dist / maxLen);
+    }
+
+    // Mark match status in UI
+    function markMatch(i, userText){
+      const expected = document.getElementById('expected-' + i).textContent;
+      const score = similarityScore(expected, userText);
+      const el = document.getElementById('match-' + i);
+      el.textContent = '';
+      const wrapper = document.getElementById('q-' + i);
+      wrapper.style.borderColor = 'transparent';
+
+      const thresh = parseFloat(thresholdEl.value) || 0.6;
+      if(userText === null || userText === '' || userText === '[No response detected]'){
+        el.textContent = 'No answer detected';
+        el.className = 'meta match no';
+        wrapper.style.borderColor = '#ddd';
+        return;
+      }
+
+      const pct = Math.round(score * 100);
+      if(score >= thresh){
+        el.textContent = `Match (${pct}% similarity)`;
+        el.className = 'meta match ok';
+        wrapper.style.borderColor = 'rgba(16,185,129,0.25)';
+      } else if(score >= thresh - 0.2){
+        el.textContent = `Partial match (${pct}% similarity)`;
+        el.className = 'meta match maybe';
+        wrapper.style.borderColor = 'rgba(246,166,35,0.15)';
+      } else {
+        el.textContent = `Mismatch (${pct}% similarity)`;
+        el.className = 'meta match no';
+        wrapper.style.borderColor = 'rgba(215,58,73,0.12)';
+      }
+    }
+
+    // Start a session: ask questions in exact order and listen, with retries
+    async function startSession() {
+      if (!SpeechRecognition) {
+        alert('This browser does not support SpeechRecognition (try Chrome or Edge).');
+        return;
+      }
+
+      const listenMs = parseInt(listenMsEl.value, 10) || 30000;
+      const maxRetries = parseInt(retriesEl.value, 10) || 2;
+
+      startBtn.disabled = true;
+      restartBtn.disabled = false;
+      saveBtn.disabled = false;
+      statusEl.textContent = 'Session started';
+
+      for (let i = 0; i < QA.length; i++) {
+        const qIndex = i;
+        document.getElementById('live-' + qIndex).textContent = 'Preparing to ask...';
+        await delay(400);
+
+        let attempt = 0;
+        let transcript = null;
+        while(attempt <= maxRetries){
+          await new Promise(resolve => speakText(QA[qIndex].q, resolve));
+          document.getElementById('live-' + qIndex).textContent = `Listening... (${Math.round(listenMs/1000)}s) - attempt ${attempt+1}`;
+          transcript = await listenOnce({timeoutMs: listenMs});
+          document.getElementById('live-' + qIndex).textContent = '';
+          if(transcript && transcript.trim().length>0){
+            break; // got an answer
+          }
+          attempt++;
+          // if not last attempt, wait a short time and repeat the question
+          if(attempt <= maxRetries){
+            document.getElementById('live-' + qIndex).textContent = 'No answer — repeating question...';
+            await delay(700);
+          }
+        }
+
+        const uEl = document.getElementById('user-' + qIndex);
+        uEl.textContent = transcript || '[No response detected]';
+        markMatch(qIndex, uEl.textContent === '[No response detected]' ? '' : uEl.textContent);
+
+        // small gap before next
+        await delay(600);
+      }
+
+      statusEl.textContent = 'Session complete';
+      startBtn.disabled = false;
+    }
+
+    // Helper: delay
+    function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+    // Listen using Web Speech Recognition once with timeout
+    function listenOnce({timeoutMs = 10000} = {}) {
+      return new Promise((resolve) => {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        let finished = false;
+        let timeoutHandle = setTimeout(() => { if (!finished) { finished = true; try { recognition.stop(); } catch(e){} resolve(null); } }, timeoutMs);
+
+        recognition.onresult = (evt) => {
+          clearTimeout(timeoutHandle);
+          finished = true;
+          const text = evt.results[0][0].transcript;
+          resolve(text);
+        };
+        recognition.onerror = (evt) => {
+          clearTimeout(timeoutHandle);
+          finished = true;
+          console.warn('Recognition error', evt.error);
+          resolve(null);
+        };
+        recognition.onend = () => {
+          if (!finished) { finished = true; clearTimeout(timeoutHandle); resolve(null); }
+        };
+
+        try {
+          recognition.start();
+        } catch (e) {
+          console.warn('start error', e);
+          clearTimeout(timeoutHandle);
+          resolve(null);
+        }
+      });
+    }
+
+    // Download recorded results as CSV
+    function downloadCSV() {
+      const rows = [['Question','Expected Answer','Your Answer','MatchStatus']];
+      QA.forEach((item,i) => {
+        const user = document.getElementById('user-' + i).textContent.replace(/\n/g,' ');
+        const match = document.getElementById('match-' + i).textContent.replace(/\n/g,' ');
+        rows.push([item.q, item.expected, user, match]);
+      });
+      const csv = rows.map(r => r.map(c => '"' + (''+c).replace(/"/g,'""') + '"').join(',')).join('\n');
+      const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'qa-records.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+
+    // Init
+    buildQuestions();
+    if (synth) {
+      populateVoices();
+      if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = populateVoices;
+      }
+    }
+
+    // Event listeners
+    startBtn.addEventListener('click', () => { statusEl.textContent = 'Starting...'; startSession(); });
+    restartBtn.addEventListener('click', () => { buildQuestions(); statusEl.textContent = 'Idle'; });
+    saveBtn.addEventListener('click', downloadCSV);
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visa Appointment Checklist</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #1a6fc4, #0d47a1);
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            border-left: 4px solid #1a6fc4;
+            padding-left: 20px;
+        }
+        
+        h2 {
+            color: #1a6fc4;
+            font-size: 22px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        h2:before {
+            content: "";
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #1a6fc4;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .section-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #e0e0e0;
+        }
+        
+        .section-item:last-child {
+            border-bottom: none;
+        }
+        
+        h3 {
+            color: #2c3e50;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+        
+        .note {
+            background-color: #e8f4fd;
+            border-left: 3px solid #1a6fc4;
+            padding: 10px 15px;
+            margin: 10px 0;
+            font-size: 14px;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        ul {
+            padding-left: 20px;
+            margin: 10px 0;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .mandatory {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+        
+        .nested-list {
+            padding-left: 25px;
+            margin-top: 5px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #6c757d;
+            font-size: 14px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                border-radius: 0;
+            }
+            
+            header {
+                padding: 20px 15px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .content {
+                padding: 20px 15px;
+            }
+            
+            h2 {
+                font-size: 20px;
+            }
+            
+            h3 {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Visa Appointment Checklist</h1>
+            <p class="subtitle">Complete documentation guide for VAC and Consulate appointments</p>
+        </header>
+        
+        <div class="content">
+            <div class="section">
+                <h2>1. VAC (Biometrics) Appointment</h2>
+                
+                <div class="section-item">
+                    <h3>a. Passport/s - All Applicants</h3>
+                    <ul>
+                        <li>Current + old passports with US visas</li>
+                        <li>Original + Printed Copies of all Non-Blank Pages</li>
+                        <li><span class="mandatory">Mandatory</span></li>
+                    </ul>
+                </div>
+                
+                <div class="section-item">
+                    <h3>b. DS-160 Confirmation Page/s - All Applicants</h3>
+                    <ul>
+                        <li>With barcode</li>
+                        <li>Printed</li>
+                        <li><span class="mandatory">Mandatory</span></li>
+                    </ul>
+                    <div class="note">
+                        <strong>Note:</strong> During Biometric the consulate will put a stamp on confirmation copies of all applicants
+                    </div>
+                </div>
+                
+                <div class="section-item">
+                    <h3>c. Appointment Confirmation</h3>
+                    <ul>
+                        <li>Visa Interview Copy (showing VAC & Consulate schedule)</li>
+                        <li>Printed Copy</li>
+                        <li><span class="mandatory">Mandatory</span></li>
+                    </ul>
+                </div>
+                
+                <div class="section-item">
+                    <h3>d. MRV Fee Receipt</h3>
+                    <ul>
+                        <li>Printed</li>
+                        <li><span class="mandatory">Mandatory</span></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>2. Consulate (Visa Interview) Appointment</h2>
+                
+                <div class="section-item">
+                    <h3>a. Passport/s - All Applicants</h3>
+                    <ul>
+                        <li>Current + old ones if available</li>
+                        <li>Original + Printed Copies of all Non-Blank Pages</li>
+                        <li><span class="mandatory">Mandatory</span></li>
+                    </ul>
+                </div>
+                
+                <div class="section-item">
+                    <h3>b. DS-160 Confirmation Page/s - All Applicants</h3>
+                    <ul>
+                        <li>Printed</li>
+                        <li><span class="mandatory">Mandatory</span></li>
+                    </ul>
+                    <div class="note">
+                        <strong>Note:</strong> You should carry only the printed copies which has stamping during biometrics of all the applicants
+                    </div>
+                </div>
+                
+                <div class="section-item">
+                    <h3>c. Appointment Confirmation</h3>
+                    <ul>
+                        <li>Visa Interview Copy (showing VAC & Consulate schedule)</li>
+                        <li>Printed Copy</li>
+                        <li><span class="mandatory">Mandatory</span></li>
+                    </ul>
+                </div>
+                
+                <div class="section-item">
+                    <h3>d. MRV Fee Receipt</h3>
+                    <ul>
+                        <li>Printed</li>
+                        <li><span class="mandatory">Mandatory</span></li>
+                    </ul>
+                </div>
+                
+                <div class="section-item">
+                    <h3>e. Graduation proof (University invite/letter)</h3>
+                    <ul>
+                        <li>If available</li>
+                        <li>I-20 - Printed - Carry the copy of I20 (F1 Visa Holder) - <span class="mandatory">Mandatory</span></li>
+                    </ul>
+                    <div class="note">
+                        <strong>Note:</strong> Attach original I20 along with the document containing course completion date
+                    </div>
+                </div>
+                
+                <div class="section-item">
+                    <h3>f. Relationship proof (Birth certificate / I-20 with names)</h3>
+                    <ul>
+                        <li>Birth certificate - Original and Printed (If Available) - <span class="mandatory">Mandatory</span></li>
+                        <li>Also carry Printed copy of F1 Visa Holder Passport
+                            <ul class="nested-list">
+                                <li>Front and Back Page. Back Page will Have Parent details - <span class="mandatory">Mandatory</span></li>
+                                <li>F1 Visa Stamping Page - <span class="mandatory">Mandatory</span></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="section-item">
+                    <h3>g. Financial evidence (Bank statements, IT returns, Salary slips)</h3>
+                    <ul>
+                        <li>Bank statements - Original and printed bank statements for the last 6 months with bank seal/signature, or an online balance confirmation certificate. - <span class="mandatory">Mandatory</span></li>
+                        <li>IT returns - Printed copies of Income Tax Returns for the last 3 years - <span class="mandatory">Mandatory</span></li>
+                        <li>Salary slips - Printed copies of salary slips for the last 3 months - <span class="mandatory">Mandatory</span></li>
+                    </ul>
+                </div>
+                
+                <div class="section-item">
+                    <h3>Ties to India (Job letter, property documents, family proof)</h3>
+                    <ul>
+                        <li>Job letter - Original and Printed copies of company letterhead (with seal/signature) - <span class="mandatory">Mandatory</span></li>
+                        <li>Property / Business Documents - In the absence of a Chartered Accountant–issued financial statement, the applicant should carry the original business registration papers for verification. <span class="mandatory">Mandatory</span></li>
+                        <li>Family proof - Original and printed copies of Aadhaar cards for all visa applicants, as well as the F-1 visa holder. - <span class="mandatory">Mandatory</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Make sure to carry all required documents to avoid delays in your visa processing</p>
+        </footer>
+    </div>
+</body>
+</html>

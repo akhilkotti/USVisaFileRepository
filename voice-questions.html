@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Voice Q&A — Ask & Record Answers</title>
+  <style>
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:18px;background:#f7f9fb;color:#111}
+    h1{font-size:20px;margin-bottom:6px}
+    .controls{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+    button{padding:8px 12px;border-radius:8px;border:1px solid #d0d7de;background:white;cursor:pointer}
+    select{padding:8px;border-radius:6px}
+    .question{background:white;padding:12px;border-radius:10px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+    .qtext{font-weight:600}
+    .answer{margin-top:8px;color:#0b5;min-height:20px}
+    .meta{color:#666;font-size:13px}
+    .status{margin-left:8px;color:#0366d6}
+    .live{color:#d73a49;font-weight:600}
+  </style>
+</head>
+<body>
+  <h1>Voice Q&A — speak answers and see them printed</h1>
+  <p class="meta">This page will <strong>ask questions using speech</strong> and then listen for your spoken answers and print them below each question.</p>
+
+  <div class="controls">
+    <label for="voiceSelect">Voice:</label>
+    <select id="voiceSelect"></select>
+    <button id="startBtn">Start session</button>
+    <button id="restartBtn">Restart</button>
+    <span class="status" id="status">Idle</span>
+  </div>
+
+  <div id="questions"></div>
+
+  <script>
+    // Questions (same as your Java list)
+    const QUESTIONS = [
+      "What is your purpose of visit?",
+      "Where is he studying?",
+      "Where does he live?",
+      "How long will you stay?",
+      "When is the graduation ceremony?",
+      "Who is he to you?",
+      "How are you related to him?",
+      "What is your relation with the person you are visiting?"
+    ];
+
+    // UI elements
+    const voiceSelect = document.getElementById('voiceSelect');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const questionsDiv = document.getElementById('questions');
+    const statusEl = document.getElementById('status');
+
+    // Web Speech objects
+    const synth = window.speechSynthesis;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+    // Build question blocks on page
+    function buildQuestions() {
+      questionsDiv.innerHTML = '';
+      QUESTIONS.forEach((q, i) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'question';
+        wrapper.id = 'q-' + i;
+
+        const qtext = document.createElement('div');
+        qtext.className = 'qtext';
+        qtext.textContent = (i + 1) + '. ' + q;
+
+        const live = document.createElement('div');
+        live.className = 'meta live';
+        live.id = 'live-' + i;
+        live.textContent = '';
+
+        const answer = document.createElement('div');
+        answer.className = 'answer';
+        answer.id = 'a-' + i;
+        answer.textContent = '';
+
+        wrapper.appendChild(qtext);
+        wrapper.appendChild(live);
+        wrapper.appendChild(answer);
+        questionsDiv.appendChild(wrapper);
+      });
+    }
+
+    // Populate voices and prefer en-US voices
+    function populateVoices() {
+      const voices = synth.getVoices();
+      voiceSelect.innerHTML = '';
+      // Prefer en-US and names like Zira/David if available
+      voices.sort((a,b) => (a.lang > b.lang ? 1 : -1));
+      voices.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.name + '||' + v.lang;
+        opt.textContent = `${v.name} — ${v.lang}`;
+        voiceSelect.appendChild(opt);
+      });
+
+      // choose best match: en-US then fallback first
+      const preferred = voices.find(v => v.lang && v.lang.includes('en-US')) || voices[0];
+      if (preferred) {
+        for (let i=0;i<voiceSelect.options.length;i++) {
+          if (voiceSelect.options[i].value.startsWith(preferred.name + '||')) { voiceSelect.selectedIndex = i; break; }
+        }
+      }
+    }
+
+    // Speak text using selected voice
+    function speakText(text, onEnd) {
+      if (!synth) { console.warn('No speechSynthesis available'); onEnd && onEnd(); return; }
+      const [voiceName] = voiceSelect.value.split('||');
+      const voices = synth.getVoices();
+      const utter = new SpeechSynthesisUtterance(text);
+      const v = voices.find(x => x.name === voiceName) || voices.find(x => x.lang && x.lang.includes('en-US'));
+      if (v) utter.voice = v;
+      utter.rate = 0.95; // slightly slower for clarity
+      utter.onstart = () => { statusEl.textContent = 'Speaking...'; }
+      utter.onend = () => { statusEl.textContent = 'Spoken'; onEnd && onEnd(); }
+      synth.cancel(); // clear previous
+      synth.speak(utter);
+    }
+
+    // Start a session: shuffle questions then ask and listen
+    async function startSession() {
+      if (!SpeechRecognition) {
+        alert('This browser does not support SpeechRecognition (try Chrome or Edge).');
+        return;
+      }
+
+      startBtn.disabled = true;
+      restartBtn.disabled = false;
+
+      // shuffle questions (copy)
+      const order = QUESTIONS.map((q,i) => i);
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
+      }
+
+      for (let idx = 0; idx < order.length; idx++) {
+        const qIndex = order[idx];
+        document.getElementById('live-' + qIndex).textContent = 'Next question coming...';
+        // Slight pause before speaking
+        await delay(600);
+        await new Promise(resolve => {
+          speakText(QUESTIONS[qIndex], resolve);
+        });
+
+        // After speaking, start listening
+        document.getElementById('live-' + qIndex).textContent = 'Listening... (please speak)';
+        const transcript = await listenOnce({timeoutMs: 10000}); // 10s max listen
+        document.getElementById('live-' + qIndex).textContent = '';
+        const aEl = document.getElementById('a-' + qIndex);
+        aEl.textContent = transcript || '[No response detected]';
+
+        // small gap before next
+        await delay(700);
+      }
+
+      statusEl.textContent = 'Session complete';
+      startBtn.disabled = false;
+    }
+
+    // Helper: delay
+    function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+    // Listen using Web Speech Recognition once with timeout
+    function listenOnce({timeoutMs = 10000} = {}) {
+      return new Promise((resolve) => {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        let finished = false;
+        let timeoutHandle = setTimeout(() => { if (!finished) { finished = true; recognition.stop(); resolve(null); } }, timeoutMs);
+
+        recognition.onresult = (evt) => {
+          clearTimeout(timeoutHandle);
+          finished = true;
+          const text = evt.results[0][0].transcript;
+          resolve(text);
+        };
+        recognition.onerror = (evt) => {
+          clearTimeout(timeoutHandle);
+          finished = true;
+          console.warn('Recognition error', evt.error);
+          resolve(null);
+        };
+        recognition.onend = () => {
+          if (!finished) { finished = true; clearTimeout(timeoutHandle); resolve(null); }
+        };
+
+        try {
+          recognition.start();
+        } catch (e) {
+          console.warn('start error', e);
+          clearTimeout(timeoutHandle);
+          resolve(null);
+        }
+      });
+    }
+
+    // Init
+    buildQuestions();
+    if (synth) {
+      // voices may load async
+      populateVoices();
+      if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = populateVoices;
+      }
+    }
+
+    // Event listeners
+    startBtn.addEventListener('click', () => { statusEl.textContent = 'Starting...'; startSession(); });
+    restartBtn.addEventListener('click', () => { buildQuestions(); statusEl.textContent = 'Idle'; });
+
+  </script>
+</body>
+</html>
